@@ -1,2 +1,4 @@
+SOURCE=main.c game.c 
+
 main: main.c
-	gcc -o main main.c -lraylib -Wall -Wextra -Wpedantic -O3
+	gcc -o main $(SOURCE) -lraylib -Wall -Wextra -Wpedantic -O3
