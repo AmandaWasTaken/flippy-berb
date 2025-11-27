@@ -19,7 +19,7 @@ int main(int argc, char** argv){
 	SetTargetFPS(60);
 
 	Bird bird = {
-		.sprite = LoadTexture("assets/velcro.png"),
+		.sprite = LoadTexture("assets/birb3.png"),
 		.posX = 300,
 		.posY = 300,
 		.gravity = 0.45f,
