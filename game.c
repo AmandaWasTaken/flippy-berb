@@ -6,7 +6,6 @@
 #include <time.h>
 #include "game.h"
 
-
 Pipe_pair spawn_pipe_pair(Window* window){
 
 	const int gap_size = 200;
@@ -38,6 +37,7 @@ Pipe_pair spawn_pipe_pair(Window* window){
 		.top = top,
 		.bot = bot,
 		.exists = true,
+		.counted = false,
 	};
 
 	return ret;
@@ -73,17 +73,25 @@ void poll_events(Bird* bird, bool* show_hitboxes){
 
 void event_loop(Bird* bird, Window* window){
 
-	bool show_hitboxes = true;
-	Pipe_pair pair = {0};
-	pair.exists = false;
-	float pipe_mvmt = 2.75f; // movement speed of pipes
 	Rectangle bird_hitbox = {0};
 	Rectangle top_pipe_hitbox = {0};
 	Rectangle bot_pipe_hitbox = {0};
 
+	bool running = true;
+	bool show_hitboxes = false;
+	
+	Pipe_pair pair = {0};
+	pair.exists = false;
+	float pipe_mvmt = 2.75f; // movement speed of pipes
+	
 	while(!WindowShouldClose()){
 		
+	ClearBackground(RAYWHITE);
+	DrawFPS(10, 10);
+
 	BeginDrawing();
+
+		/* Hitbox position settings */
 
 		bird_hitbox.x 	   	= bird->posX;
 		bird_hitbox.y 	   	= bird->posY;
@@ -101,36 +109,94 @@ void event_loop(Bird* bird, Window* window){
 		bot_pipe_hitbox.height 	= 600;
 
 
+		/* Main Loop */
+		if(running){
+
+		/* Check collisions */
 		if(check_env_collision(window, bird)){
 			fprintf(stdout, "YOU DIED!!!!!!!!!\n");
-			// game_over(window);
+			running = false;
 		}
 		
 		if(CheckCollisionRecs(bird_hitbox, top_pipe_hitbox)){
 			fprintf(stdout, "Hit top pipe!!!!\n");
-		//	EndDrawing();
-		//	game_over(window);
+			running = false;
 		}
 
 		if(CheckCollisionRecs(bird_hitbox, bot_pipe_hitbox)){
 			fprintf(stdout, "Hit bot pipe!!!!\n");
+			running = false;
 		}
 
-		int should_spawn_pipes = rand() % 5;	
+		/* Poll Events */
+		poll_events(bird, &show_hitboxes);
+		bird->velocityY += bird->gravity;
+		bird->posY += bird->velocityY;
 
+		/* Spawn pipes */
+		int should_spawn_pipes = rand() % 5;	
 		if(should_spawn_pipes == 0 && !pair.exists){
 			pair = spawn_pipe_pair(window);
 			fprintf(stdout, "Pair Spawned\n");
 		}
 
-		ClearBackground(RAYWHITE);
-		DrawFPS(10, 10);
+		if(pair.exists){
+			pair.top.posX -= pipe_mvmt;
+			DrawTexture(pair.top.sprite,
+		    		pair.top.posX,
+    		    		pair.top.posY,
+			    	pair.top.tint);
 
-		poll_events(bird, &show_hitboxes);
+			pair.bot.posX -= pipe_mvmt;
+			DrawTexture(pair.bot.sprite,
+		   		pair.bot.posX,
+			   	pair.bot.posY,
+		   		pair.bot.tint);
 
-		// shits backwards; bird falls down with +=
-		bird->velocityY += bird->gravity;
-		bird->posY += bird->velocityY;
+			if(bird->posX > pair.top.posX && !pair.counted){
+				pair.counted = true;
+				window->score++;
+			}
+
+			// Ready to spawn a new pair of pipes
+			// (Previous pair has despawned)
+			if(pair.top.posX + pair.top.sprite.width < 0){
+				pair.exists = false;
+				fprintf(stdout, "Pair Despawned\n");
+				pipe_mvmt += 0.375f;
+			}
+		}
+
+		/* Do stuff if there's a pipe pair on screen */
+		if(pair.exists){
+			pair.top.posX -= pipe_mvmt;
+			DrawTexture(pair.top.sprite,
+		    		pair.top.posX,
+    		    		pair.top.posY,
+			    	pair.top.tint);
+
+			pair.bot.posX -= pipe_mvmt;
+			DrawTexture(pair.bot.sprite,
+		   		pair.bot.posX,
+			   	pair.bot.posY,
+		   		pair.bot.tint);
+
+			// Ready to spawn a new pair of pipes
+			// (Previous pair has despawned)
+			if(pair.top.posX + pair.top.sprite.width < 0){
+				pair.exists = false;
+				fprintf(stdout, "Pair Despawned\n");
+				pair.exists = false;
+				pipe_mvmt += 0.375f;
+			}
+		}
+
+		char current_score[32];
+		sprintf(current_score, "Score: %i", window->score);
+		current_score[strlen(current_score)] = '\0';
+		DrawText(current_score, window->w / 2 - strlen(current_score),
+				0 + 32, 30, RED);
+
 
 		/* DEBUG */
 		char pipe_speed[32];
@@ -168,29 +234,16 @@ void event_loop(Bird* bird, Window* window){
 			    bird->posY,
 			    bird->tint);
 
-		if(pair.exists){
-			pair.top.posX -= pipe_mvmt;
-			DrawTexture(pair.top.sprite,
-		    		pair.top.posX,
-    		    		pair.top.posY,
-			    	pair.top.tint);
+		} else { 
+			DrawText("GAME OVER", window->w/2 - 150, window->h/2,
+				 50, RED);
 
-			pair.bot.posX -= pipe_mvmt;
-			DrawTexture(pair.bot.sprite,
-		   		pair.bot.posX,
-			   	pair.bot.posY,
-		   		pair.bot.tint);
-
-			// Ready to spawn a new pair of pipes
-			// (Previous pair has despawned)
-			if(pair.top.posX + pair.top.sprite.width < 0){
-				pair.exists = false;
-				fprintf(stdout, "Pair Despawned\n");
-				pair.exists = false;
-				pipe_mvmt += 0.375f;
-			}
+			char final_score[32];
+			sprintf(final_score, "Final score: %i", window->score); 
+			DrawText(final_score, window->w/2 - 150, window->h/2 + 70,
+				 50, RED);
 		}
-
+		
 	EndDrawing();
 	}
 

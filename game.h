@@ -23,12 +23,14 @@ typedef struct {
 	Pipe bot;
 	bool exists;
 	Rectangle hitbox;
+	bool counted;
 } Pipe_pair;
 
 typedef struct {
 	char* title;
 	int w;
 	int h;
+	int score;
 } Window;
 
 Pipe_pair spawn_pipe_pair(Window* window);
