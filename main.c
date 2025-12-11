@@ -4,6 +4,7 @@
 #include <time.h>
 #include "game.h"
 
+
 int main(int argc, char** argv){
 
 	// For "random" pipe spawning 
@@ -13,6 +14,7 @@ int main(int argc, char** argv){
 		.title = "Birb",
 		.w = 1000,
 		.h = 700,
+		.attempts = 1,
 	};
 
 	InitWindow(game.w, game.h, game.title);
@@ -28,6 +30,8 @@ int main(int argc, char** argv){
 		.tint = WHITE
 	};
 
+//	Bird bird = DEFAULT_BIRD;
+//	bird.sprite = LoadTexture("assets/birb3.png");
 	event_loop(&bird, &game);
         return 0;
 }

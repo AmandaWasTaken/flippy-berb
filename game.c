@@ -6,6 +6,19 @@
 #include <time.h>
 #include "game.h"
 
+#define INITIAL_PIPE_SPEED 2.75f
+#define FONT_SIZE_GENERAL 22
+#define FONT_SIZE_GAMEOVER 40
+
+Bird DEFAULT_BIRD = {	
+	.posX = 300,
+	.posY = 300,
+	.gravity = 0.45f,
+	.jump_velocity = 7.5f,
+	.velocityY = 0.0f,
+	.tint = WHITE,
+};
+
 Pipe_pair spawn_pipe_pair(Window* window){
 
 	const int gap_size = 200;
@@ -42,20 +55,7 @@ Pipe_pair spawn_pipe_pair(Window* window){
 
 	return ret;
 }
-/*
-void game_over(Window* window){
-	
-	char gameOver[11] = "Game Over!";
-	const size_t len = strlen(gameOver);
 
-	BeginDrawing();
-	while(1){
-		DrawText(gameOver, window->w - len/2, 500, 40, RED);
-		if(IsKeyPressed(KEY_ESCAPE)) break;
-	}
-	return;
-}
-*/
 bool check_env_collision(Window* window, Bird* bird){
 	return bird->posY > window->h || bird->posY < 0;
 }
@@ -73,10 +73,6 @@ void poll_events(Bird* bird, bool* show_hitboxes){
 
 void event_loop(Bird* bird, Window* window){
 
-	Rectangle bird_hitbox = {0};
-	Rectangle top_pipe_hitbox = {0};
-	Rectangle bot_pipe_hitbox = {0};
-
 	bool running = true;
 	bool show_hitboxes = false;
 	
@@ -92,6 +88,10 @@ void event_loop(Bird* bird, Window* window){
 	BeginDrawing();
 
 		/* Hitbox position settings */
+
+		Rectangle bird_hitbox 	  = {0};
+		Rectangle top_pipe_hitbox = {0};
+		Rectangle bot_pipe_hitbox = {0};
 
 		bird_hitbox.x 	   	= bird->posX;
 		bird_hitbox.y 	   	= bird->posY;
@@ -191,11 +191,21 @@ void event_loop(Bird* bird, Window* window){
 			}
 		}
 
+		/* Draw score */
 		char current_score[32];
 		sprintf(current_score, "Score: %i", window->score);
-		current_score[strlen(current_score)] = '\0';
-		DrawText(current_score, window->w / 2 - strlen(current_score),
-				0 + 32, 30, RED);
+
+		int score_text_w = MeasureText(current_score, FONT_SIZE_GENERAL);
+		int score_text_x = (GetScreenWidth() - score_text_w) / 2;
+		DrawText(current_score, score_text_x, 0 + 32, FONT_SIZE_GENERAL, RED);
+
+		/* Draw Attempt */
+		char current_attempt[16];
+		sprintf(current_attempt, "Attempt: %i", window->attempts);
+
+		int att_text_w = MeasureText(current_attempt, FONT_SIZE_GENERAL);
+		int att_text_x = (GetScreenWidth() - att_text_w) / 2;
+		DrawText(current_attempt, att_text_x, 32 + 24, FONT_SIZE_GENERAL, RED);
 
 
 		/* DEBUG */
@@ -234,14 +244,52 @@ void event_loop(Bird* bird, Window* window){
 			    bird->posY,
 			    bird->tint);
 
+		/* Game over */
 		} else { 
-			DrawText("GAME OVER", window->w/2 - 150, window->h/2,
-				 50, RED);
+
+			char* game_over = "Game Over!";
+			int game_over_w = MeasureText(game_over, FONT_SIZE_GAMEOVER);
+			int game_over_x = (GetScreenWidth() - game_over_w) / 2;
+			int game_over_y = GetScreenHeight()/2 - 200;
+			DrawText(game_over, game_over_x, game_over_y, FONT_SIZE_GAMEOVER, RED);
+
 
 			char final_score[32];
 			sprintf(final_score, "Final score: %i", window->score); 
-			DrawText(final_score, window->w/2 - 150, window->h/2 + 70,
-				 50, RED);
+			int score_w = MeasureText(final_score, FONT_SIZE_GAMEOVER);
+			int score_x = (GetScreenWidth() - score_w) / 2;
+			int score_y = GetScreenHeight()/2 - 100;
+			DrawText(final_score, score_x, score_y, FONT_SIZE_GAMEOVER, RED);
+
+			char restart[19];
+			sprintf(restart, "Press R to Restart");
+			int res_w = MeasureText(restart, FONT_SIZE_GAMEOVER);
+			int res_x = (GetScreenWidth() - res_w) / 2;
+			int res_y = GetScreenHeight()/2;
+			DrawText(restart, res_x, res_y, FONT_SIZE_GAMEOVER, DARKGREEN);
+
+			/* Restart game */
+			if(IsKeyPressed('R')){
+				/* Reset score */
+				window->score = 0;
+				window->attempts++;
+
+				/* Reset birb */
+				*bird = DEFAULT_BIRD;
+				bird->sprite = LoadTexture("assets/birb3.png");
+
+				/* Reset pipes */
+				pair.exists = false;
+				pair.counted = false;
+				pair.top.posX = 0;
+				pair.top.posY = 0;
+				pair.bot.posX = 0;
+				pair.bot.posY = 0;
+				pipe_mvmt = INITIAL_PIPE_SPEED;
+
+				/* we go agane */
+				running = true;
+			}
 		}
 		
 	EndDrawing();

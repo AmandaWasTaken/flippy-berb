@@ -1,3 +1,6 @@
+#ifndef GAME_H
+#define GAME_H
+
 #include <raylib.h>
 
 typedef struct {
@@ -10,6 +13,8 @@ typedef struct {
 	Color tint;
 	Rectangle hitbox;
 } Bird;
+
+extern Bird DEFAULT_BIRD;
 
 typedef struct {
 	Texture2D sprite;
@@ -31,6 +36,7 @@ typedef struct {
 	int w;
 	int h;
 	int score;
+	int attempts;
 } Window;
 
 Pipe_pair spawn_pipe_pair(Window* window);
@@ -39,3 +45,4 @@ void event_loop(Bird* bird, Window* window);
 bool check_env_collision(Window* window, Bird* bird);
 void game_over(Window* window);
 
+#endif
