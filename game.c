@@ -4,7 +4,9 @@
 #include <raylib.h>
 #include <string.h>
 #include <time.h>
+
 #include "game.h"
+#include "scores.h"
 
 #define INITIAL_PIPE_SPEED 2.75f
 #define FONT_SIZE_GENERAL 22
@@ -114,17 +116,14 @@ void event_loop(Bird* bird, Window* window){
 
 		/* Check collisions */
 		if(check_env_collision(window, bird)){
-			fprintf(stdout, "YOU DIED!!!!!!!!!\n");
 			running = false;
 		}
 		
 		if(CheckCollisionRecs(bird_hitbox, top_pipe_hitbox)){
-			fprintf(stdout, "Hit top pipe!!!!\n");
 			running = false;
 		}
 
 		if(CheckCollisionRecs(bird_hitbox, bot_pipe_hitbox)){
-			fprintf(stdout, "Hit bot pipe!!!!\n");
 			running = false;
 		}
 
@@ -207,6 +206,22 @@ void event_loop(Bird* bird, Window* window){
 		int att_text_x = (GetScreenWidth() - att_text_w) / 2;
 		DrawText(current_attempt, att_text_x, 32 + 24, FONT_SIZE_GENERAL, RED);
 
+		/* Draw top scores (max. 5) */ 
+		int scores[5]; 
+		int score_count = fetch_scores(scores);
+	    	qsort(scores, score_count, sizeof(int), compare);
+
+		char sd[5 * 5];
+		sprintf(sd, "%i\n%i\n%i\n%i\n%i", scores[0], scores[1], scores[2],
+				scores[3], scores[4]);
+
+		sd[strlen(sd)] = '\0';
+		DrawText(sd, window->w - 100, 10, 20, RED);
+
+		char score_pos[20];
+		sprintf(score_pos, "#1:\n#2:\n#3:\n#4:\n#5:");
+		score_pos[strlen(score_pos)] = '\0';
+		DrawText(score_pos, window->w - 150, 10, 20, MAROON);
 
 		/* DEBUG */
 		char pipe_speed[32];
@@ -244,9 +259,9 @@ void event_loop(Bird* bird, Window* window){
 			    bird->posY,
 			    bird->tint);
 
+
 		/* Game over */
 		} else { 
-
 			char* game_over = "Game Over!";
 			int game_over_w = MeasureText(game_over, FONT_SIZE_GAMEOVER);
 			int game_over_x = (GetScreenWidth() - game_over_w) / 2;
@@ -270,6 +285,10 @@ void event_loop(Bird* bird, Window* window){
 
 			/* Restart game */
 			if(IsKeyPressed('R')){
+
+				/* Write score to db */
+				save_score(window->score);
+
 				/* Reset score */
 				window->score = 0;
 				window->attempts++;
@@ -290,8 +309,8 @@ void event_loop(Bird* bird, Window* window){
 				/* we go agane */
 				running = true;
 			}
-		}
-		
+		}	
+
 	EndDrawing();
 	}
 
