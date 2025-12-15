@@ -11,6 +11,7 @@
 #define INITIAL_PIPE_SPEED 2.75f
 #define FONT_SIZE_GENERAL 22
 #define FONT_SIZE_GAMEOVER 40
+#define PIPE_SPACING 500.0f
 
 Bird DEFAULT_BIRD = {	
 	.posX = 300,
@@ -21,49 +22,176 @@ Bird DEFAULT_BIRD = {
 	.tint = WHITE,
 };
 
-Pipe_pair spawn_pipe_pair(Window* window){
+void pipebuf_init(Pipe_buffer* buf){
+	buf->head  = 0;
+	buf->tail  = 0;
+	buf->count = 0;
 
-	const int gap_size = 200;
-	const int error_margin = 20;
+	for(int i = 0; i < MAX_PIPES; i++){
+		buf->pairs[i].exists = false;
+		buf->pairs[i].counted = false;
+	}
+}
 
-	Texture2D top_tex = LoadTexture("assets/pipe_top.png");
-	Texture2D bot_tex = LoadTexture("assets/pipe_bot.png");
+void spawn_pipe_pair(Pipe_pair* pair, float start_x, Texture2D top, Texture2D bot){
 
-	int min_gap = error_margin;
-	int max_gap = window->h - gap_size - error_margin;
+	float gap_y = GetRandomValue(150, 450);
+	float gap_h = 225.0f;
 
-	int gap_y = GetRandomValue(min_gap, max_gap);
+	pair->top.sprite = top;
+	pair->bot.sprite = bot;
 
-	Pipe top = {
-		.sprite = top_tex, 
-		.posX = window->w,
-		.posY = gap_y - top.sprite.height, 
-		.tint = WHITE,
+	pair->top.posX = start_x;
+	pair->top.posY = gap_y - gap_h/2 - PIPE_HEIGHT;
+
+	pair->bot.posX = start_x;
+	pair->bot.posY = gap_y + gap_h/2;
+
+	pair->exists = true;
+	pair->counted = false;
+
+	pair->top.tint = WHITE;
+	pair->bot.tint = WHITE;
+
+	pair->hitbox = (Rectangle){
+		start_x,
+		0,
+		PIPE_WIDTH,
+		GetScreenHeight()
 	};
+}
 
-	Pipe bot = {
-		.sprite = bot_tex, 
-		.posX = window->w,
-		.posY = gap_y + gap_size, 
-		.tint = WHITE,
+bool pipebuf_spawn(Pipe_buffer* buf, float start_x, Texture2D top, Texture2D bot){
+	
+	if(buf->count == MAX_PIPES) return false;
+
+	spawn_pipe_pair(&buf->pairs[buf->head], start_x, top, bot);
+	buf->head = (buf->head + 1) % MAX_PIPES;
+	buf->count++;
+	return true;
+}
+
+bool pipebuf_despawn(Pipe_buffer* buf){
+	
+	if(buf->count == 0) return false;
+
+	buf->pairs[buf->tail].exists = false;
+	buf->tail = (buf->tail + 1) % MAX_PIPES;
+	buf->count--;
+	return true;
+}
+
+float pipebuf_getRightmost(const Pipe_buffer* buf){
+
+	if(buf->count == 0) return GetScreenWidth();
+	
+	int last = (buf->head - 1 + MAX_PIPES) % MAX_PIPES;
+	return buf->pairs[last].top.posX;
+
+}
+
+void pipebuf_update(Pipe_buffer* buf, float speed, float dt, Texture2D top, Texture2D bot){
+
+	for(int i = 0; i < buf->count; i++){
+		int idx = (buf->tail + i) % MAX_PIPES;
+		Pipe_pair* pair = &buf->pairs[idx];
+
+		pair->top.posX -= speed * dt;
+		pair->bot.posX -= speed * dt;
+		pair->hitbox.x -= speed * dt;
+	}
+
+	if(buf->count > 0){
+		Pipe_pair* oldest = &buf->pairs[buf->tail];
+
+		if(oldest->top.posX + PIPE_WIDTH < 0){
+			pipebuf_despawn(buf);
+			float spawn_x = pipebuf_getRightmost(buf) + PIPE_SPACING;
+			pipebuf_spawn(buf, spawn_x, top, bot);
+		}
+	}
+}
+
+void pipebuf_render(Pipe_buffer* buf){
+
+	for(int i = 0; i < buf->count; i++){
+		int idx = (buf->tail + i) % MAX_PIPES;
+		Pipe_pair* p = &buf->pairs[idx];
+		if(!p->exists) continue;
+
+		DrawTexture(p->top.sprite, p->top.posX, 
+				p->top.posY, p->top.tint);
+		DrawTexture(p->bot.sprite, p->bot.posX, 
+				p->bot.posY, p->bot.tint);
+	}
+
+}
+
+Rectangle get_pipe_hitbox(Pipe* p){
+	return (Rectangle) {
+		p->posX,
+		p->posY,
+		(float) PIPE_WIDTH,
+		(float) PIPE_HEIGHT
 	};
+}
 
-	Pipe_pair ret = {
-		.top = top,
-		.bot = bot,
-		.exists = true,
-		.counted = false,
-	};
+bool check_pipe_collision(Pipe_pair* p, Rectangle bird_hitbox){
 
-	return ret;
+	if(!p->exists) return false;
+
+	Rectangle top_hitbox = get_pipe_hitbox(&p->top);
+	Rectangle bot_hitbox = get_pipe_hitbox(&p->bot);
+
+	return CheckCollisionRecs(bird_hitbox, top_hitbox) ||
+	       CheckCollisionRecs(bird_hitbox, bot_hitbox);
+}
+
+bool pipebuf_check_collision(Pipe_buffer* buf, Rectangle bird_hitbox){
+
+	for(int i = 0; i < buf->count; i++){
+		int idx = (buf->tail + i) % MAX_PIPES;
+		Pipe_pair* p = &buf->pairs[idx];
+		if(check_pipe_collision(p, bird_hitbox))
+			return true;
+	}
+	return false;
+}
+
+void update_score(Pipe_buffer* buf, Bird* bird, int* score, float* speed){
+
+	for(int i = 0; i < buf->count; i++){
+		int idx = (buf->tail + i) % MAX_PIPES;
+		Pipe_pair* p = &buf->pairs[idx];
+
+		if(!p->counted &&
+		   bird->posX > p->top.posX + PIPE_WIDTH){
+			(*score)++;
+			p->counted = true;
+			(*speed) += 0.1f;
+		}
+	}
 }
 
 bool check_env_collision(Window* window, Bird* bird){
 	return bird->posY > window->h || bird->posY < 0;
 }
 
+void game_reset(Window* window, Bird* bird, Pipe_buffer* buf, 
+		Texture2D bird_tex, Texture2D top, Texture2D bot){
+	window->score = 0;
+	*bird = DEFAULT_BIRD;
+	bird->sprite = bird_tex;
+	pipebuf_init(buf);
 
-void poll_events(Bird* bird, bool* show_hitboxes){
+	float start_x = GetScreenWidth() + 100.0f;
+	for(int i = 0; i < MAX_PIPES; i++){
+		pipebuf_spawn(buf, start_x + i * PIPE_SPACING,
+				top, bot);
+	}
+}
+
+void poll_events(Bird* bird, bool* show_hitboxes, bool* show_debug){
 
 	if(IsKeyPressed(KEY_SPACE) || IsKeyPressed(KEY_UP)){
 		bird->velocityY = -bird->jump_velocity;
@@ -71,17 +199,33 @@ void poll_events(Bird* bird, bool* show_hitboxes){
 	if(IsKeyPressed('H')){
 		*show_hitboxes = ! *show_hitboxes;
 	}
+
+	if(IsKeyPressed('D')){
+		*show_debug = ! *show_debug;
+	}
 } 
 
 void event_loop(Bird* bird, Window* window){
 
+
+	Texture2D top_tex = LoadTexture("assets/pipe_top.png");
+	Texture2D bot_tex = LoadTexture("assets/pipe_bot.png");
+	Texture2D bird_tex = LoadTexture("assets/birb3.png");
+
 	bool running = true;
 	bool show_hitboxes = false;
+	bool show_debug = false;
 	
-	Pipe_pair pair = {0};
-	pair.exists = false;
-	float pipe_mvmt = 2.75f; // movement speed of pipes
-	
+
+	Pipe_buffer pipe_buf;
+	pipebuf_init(&pipe_buf);
+	float pipe_speed = INITIAL_PIPE_SPEED;
+	float start_x = GetScreenWidth() + 100.0f;
+	const int dt = 1;
+	for(int i = 0; i < MAX_PIPES; i++){
+		pipebuf_spawn(&pipe_buf, start_x + i * PIPE_SPACING, top_tex, bot_tex);
+	}
+
 	while(!WindowShouldClose()){
 		
 	ClearBackground(RAYWHITE);
@@ -91,104 +235,36 @@ void event_loop(Bird* bird, Window* window){
 
 		/* Hitbox position settings */
 
-		Rectangle bird_hitbox 	  = {0};
-		Rectangle top_pipe_hitbox = {0};
-		Rectangle bot_pipe_hitbox = {0};
+		Rectangle bird_hitbox 	= {0};
 
 		bird_hitbox.x 	   	= bird->posX;
 		bird_hitbox.y 	   	= bird->posY;
 		bird_hitbox.width  	= 132;
 		bird_hitbox.height 	= 88;
 
-		top_pipe_hitbox.x 	= pair.top.posX;
-		top_pipe_hitbox.y 	= pair.top.posY;
-		top_pipe_hitbox.width 	= 200;
-		top_pipe_hitbox.height 	= 600;
-
-		bot_pipe_hitbox.x 	= pair.bot.posX;
-		bot_pipe_hitbox.y 	= pair.bot.posY;
-		bot_pipe_hitbox.width 	= 200;
-		bot_pipe_hitbox.height 	= 600;
-
 
 		/* Main Loop */
 		if(running){
+
+		pipebuf_update(&pipe_buf, pipe_speed, dt, top_tex, bot_tex);
+		pipebuf_render(&pipe_buf);
 
 		/* Check collisions */
 		if(check_env_collision(window, bird)){
 			running = false;
 		}
 		
-		if(CheckCollisionRecs(bird_hitbox, top_pipe_hitbox)){
-			running = false;
-		}
-
-		if(CheckCollisionRecs(bird_hitbox, bot_pipe_hitbox)){
+		if(check_pipe_collision(&pipe_buf.pairs[pipe_buf.tail], bird_hitbox)){
 			running = false;
 		}
 
 		/* Poll Events */
-		poll_events(bird, &show_hitboxes);
+		poll_events(bird, &show_hitboxes, &show_debug);
 		bird->velocityY += bird->gravity;
-		bird->posY += bird->velocityY;
+		bird->posY += bird->velocityY;		
 
-		/* Spawn pipes */
-		int should_spawn_pipes = rand() % 5;	
-		if(should_spawn_pipes == 0 && !pair.exists){
-			pair = spawn_pipe_pair(window);
-			fprintf(stdout, "Pair Spawned\n");
-		}
-
-		if(pair.exists){
-			pair.top.posX -= pipe_mvmt;
-			DrawTexture(pair.top.sprite,
-		    		pair.top.posX,
-    		    		pair.top.posY,
-			    	pair.top.tint);
-
-			pair.bot.posX -= pipe_mvmt;
-			DrawTexture(pair.bot.sprite,
-		   		pair.bot.posX,
-			   	pair.bot.posY,
-		   		pair.bot.tint);
-
-			if(bird->posX > pair.top.posX && !pair.counted){
-				pair.counted = true;
-				window->score++;
-			}
-
-			// Ready to spawn a new pair of pipes
-			// (Previous pair has despawned)
-			if(pair.top.posX + pair.top.sprite.width < 0){
-				pair.exists = false;
-				fprintf(stdout, "Pair Despawned\n");
-				pipe_mvmt += 0.375f;
-			}
-		}
-
-		/* Do stuff if there's a pipe pair on screen */
-		if(pair.exists){
-			pair.top.posX -= pipe_mvmt;
-			DrawTexture(pair.top.sprite,
-		    		pair.top.posX,
-    		    		pair.top.posY,
-			    	pair.top.tint);
-
-			pair.bot.posX -= pipe_mvmt;
-			DrawTexture(pair.bot.sprite,
-		   		pair.bot.posX,
-			   	pair.bot.posY,
-		   		pair.bot.tint);
-
-			// Ready to spawn a new pair of pipes
-			// (Previous pair has despawned)
-			if(pair.top.posX + pair.top.sprite.width < 0){
-				pair.exists = false;
-				fprintf(stdout, "Pair Despawned\n");
-				pair.exists = false;
-				pipe_mvmt += 0.375f;
-			}
-		}
+		/* Increment score */
+		update_score(&pipe_buf, bird, &window->score, &pipe_speed);
 
 		/* Draw score */
 		char current_score[32];
@@ -224,41 +300,34 @@ void event_loop(Bird* bird, Window* window){
 		DrawText(score_pos, window->w - 150, 10, 20, MAROON);
 
 		/* DEBUG */
-		char pipe_speed[32];
-		sprintf(pipe_speed, "Current speed: %f", pipe_mvmt);
-		pipe_speed[strlen(pipe_speed)] = '\0';
-		DrawText(pipe_speed, 200, window->h - 32, 30, RED);
-
-		/* DEBUG */
-		char hitbox_status[32];
-		sprintf(hitbox_status, "%s", show_hitboxes ? "Hitboxes: Visible" :
-							     "Hitboxes: Hidden");
-
-		hitbox_status[strlen(hitbox_status)] = '\0';
-		DrawText(hitbox_status, 200, window->h - 64, 30, RED);
-		DrawText("(H to toggle)", 600, window->h - 64, 30, RED);
-		if(show_hitboxes){
-
-			// Render bird hitbox
-			DrawRectangle(bird->posX,
-				      bird->posY,
-				      132, 88, RED); 
-			if(pair.exists){
-				// Render pipe hitboxes
-				DrawRectangle(pair.top.posX,
-					      pair.top.posY,
-					      200, 600, RED);
-				DrawRectangle(pair.bot.posX,
-					      pair.bot.posY,
-					      200, 600, RED);
-			}
+		if(show_debug){
+			char hitbox_status[32];
+			sprintf(hitbox_status, "%s", show_hitboxes ? "Hitboxes: Visible" :
+								     "Hitboxes: Hidden");
+	
+			char curr_speed[32];
+			sprintf(curr_speed, "Speed %.2f", pipe_speed);
+			curr_speed[strlen(curr_speed)] = '\0';
+			DrawText(curr_speed, 200, window->h - 128, 30, RED);
+	
+			hitbox_status[strlen(hitbox_status)] = '\0';
+			DrawText(hitbox_status, 200, window->h - 64, 30, RED);
+			DrawText("(H to toggle)", 600, window->h - 64, 30, RED);
+			if(show_hitboxes){
+				// Render bird hitbox
+				DrawRectangle(bird->posX,
+					      bird->posY,
+					      132, 88, RED); 
+				}
+		} else {
+			DrawText("Press D to toggle debug info",
+				 window->w - 900 , window->h - 50, 20, BLUE);
 		}
 
 		DrawTexture(bird->sprite,
 			    bird->posX,
 			    bird->posY,
 			    bird->tint);
-
 
 		/* Game over */
 		} else { 
@@ -290,22 +359,12 @@ void event_loop(Bird* bird, Window* window){
 				save_score(window->score);
 
 				/* Reset score */
-				window->score = 0;
 				window->attempts++;
 
-				/* Reset birb */
-				*bird = DEFAULT_BIRD;
-				bird->sprite = LoadTexture("assets/birb3.png");
-
-				/* Reset pipes */
-				pair.exists = false;
-				pair.counted = false;
-				pair.top.posX = 0;
-				pair.top.posY = 0;
-				pair.bot.posX = 0;
-				pair.bot.posY = 0;
-				pipe_mvmt = INITIAL_PIPE_SPEED;
-
+				/* Reset game state */
+				game_reset(window, bird, &pipe_buf,
+						bird_tex, top_tex, bot_tex);
+				
 				/* we go agane */
 				running = true;
 			}
@@ -315,7 +374,7 @@ void event_loop(Bird* bird, Window* window){
 	}
 
 	UnloadTexture(bird->sprite);
-	UnloadTexture(pair.top.sprite);
-	UnloadTexture(pair.bot.sprite);
+	//UnloadTexture(pair.top.sprite);
+	//UnloadTexture(pair.bot.sprite);
 	CloseWindow();
 }
