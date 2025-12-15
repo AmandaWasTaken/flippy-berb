@@ -1,1 +1,2 @@
-i'm learning raylib this shid sucks for now
+Flappy bird clone for learning Raylib basics  
+THIS IS SUPER WIP SO EXPECT BUGS AND MESSY CODE !!
