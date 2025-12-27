@@ -50,19 +50,10 @@ typedef struct {
 	int attempts;
 } Window;
 
-void pipebuf_init(Pipe_buffer* buf);
-void spawn_pipe_pair(Pipe_pair* pair, float start_x,
-		Texture2D top, Texture2D bot);
-bool pipebuf_spawn(Pipe_buffer* buf, float start_x,
-		Texture2D top, Texture2D bot);
-bool pipebuf_despawn(Pipe_buffer* buf);
-float pipebuf_getRightmost(const Pipe_buffer* buf);
-void pipebuf_update(Pipe_buffer* buf, float speed, float dt, Texture2D top, Texture2D bot);
-void pipebuf_render(Pipe_buffer* buf);
-Rectangle get_pipe_hitbox(Pipe* p);
-bool check_pipe_collision(Pipe_pair* p, Rectangle bird_hitbox);
-bool pipebuf_check_collision(Pipe_buffer* buf, Rectangle bird_hitbox);
 void update_score(Pipe_buffer* buf, Bird* bird, int* score, float* speed);
+void render_score(Window* window);
+void render_attempt(Window* window);
+void render_leaderboard(Window* window);
 
 // Pipe_pair spawn_pipe_pair(Window* window);
 void poll_events(Bird* bird, bool* show_hitboxes, bool* show_debug);

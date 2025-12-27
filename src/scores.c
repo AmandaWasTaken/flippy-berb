@@ -5,7 +5,8 @@
 #define BUF_SIZE 1024
 #define MAX_SCORES 10
 
-int compare(const void* a, const void* b){
+// Used for sorting top scores
+int _compare(const void* a, const void* b){
 	int x = *(const int*) a;
 	int y = *(const int*) b;
 	return y - x;
@@ -17,7 +18,6 @@ void save_score(int score){
 	cJSON* scores = NULL;
 
 	FILE* f = fopen("data/scores.json", "r");
-	printf("Opened file\n");
 	if(f){
 		fseek(f, 0, SEEK_END);
 		long len = ftell(f);
@@ -29,7 +29,6 @@ void save_score(int score){
 		fclose(f);
 		
 		root = cJSON_Parse(data);
-		printf("Parsed json\n");
 		if(!root){
 			printf("JSON parse failed\n");
 		}
@@ -52,7 +51,6 @@ void save_score(int score){
 	cJSON* entry = cJSON_CreateObject();
 	cJSON_AddNumberToObject(entry, "Score", score);
 	cJSON_AddItemToArray(scores, entry);
-	printf("Added item to array\n");
 
 	char* outp = cJSON_Print(root);
 	f = fopen("data/scores.json", "w");
@@ -68,7 +66,7 @@ void save_score(int score){
 
 int fetch_scores(int* res){
 
-	FILE *f = fopen("data/scores.json", "r");
+	FILE* f = fopen("data/scores.json", "r");
 	    if (!f) {
 	        perror("fopen");
 	        return 0;
@@ -101,7 +99,6 @@ int fetch_scores(int* res){
 	        cJSON_Delete(root);
 	        return 0;
 	    }
-
 	
 	    int count = 0;
 	    cJSON* entry;
@@ -121,7 +118,3 @@ int fetch_scores(int* res){
 	    cJSON_Delete(root);
 	    return count;
 }
-	
-
-
-
