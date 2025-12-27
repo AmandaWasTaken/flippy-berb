@@ -8,6 +8,7 @@
 #include "../lib/game.h"
 #include "../lib/scores.h"
 #include "../lib/pipes.h"
+#include "../lib/bg.h"
 
 Bird DEFAULT_BIRD = {	
 	.posX = 300,
@@ -108,6 +109,31 @@ void game_reset(Window* window, Bird* bird, Pipe_buffer* buf,
 				top, bot);
 	}
 }
+
+void draw_debug_info(Window* window, Bird* bird, 
+		bool* show_hitboxes, float pipe_speed){
+
+	char hitbox_status[32];
+	sprintf(hitbox_status, "%s", show_hitboxes ? 
+				"Hitboxes: Visible" :
+				"Hitboxes: Hidden");
+	
+	char curr_speed[32];
+	sprintf(curr_speed, "Speed %.2f", pipe_speed);
+	curr_speed[strlen(curr_speed)] = '\0';
+	DrawText(curr_speed, 200, window->h - 128, 30, RED);
+	
+	hitbox_status[strlen(hitbox_status)] = '\0';
+	DrawText(hitbox_status, 200, window->h - 64, 30, RED);
+	DrawText("(H to toggle)", 600, window->h - 64, 30, RED);
+	if(show_hitboxes){
+		// Render bird hitbox
+		DrawRectangle(bird->posX,
+			      bird->posY,
+			      132, 88, RED); 
+		}
+}
+
 void end_game(Window* window, bool* running, Bird* bird,
 		Texture2D top, Texture2D bot, Texture2D bird_tex,
 		Pipe_buffer* buf){
@@ -160,7 +186,7 @@ void end_game(Window* window, bool* running, Bird* bird,
 	}
 }
 
-void poll_events(Bird* bird, bool* show_hitboxes, bool* show_debug){
+void poll_events(Bird* bird, bool* show_debug, bool* show_hitboxes){
 
 	if(IsKeyPressed(KEY_SPACE) || IsKeyPressed(KEY_UP)){
 		bird->velocityY = -bird->jump_velocity;
@@ -177,13 +203,18 @@ void poll_events(Bird* bird, bool* show_hitboxes, bool* show_debug){
 void event_loop(Bird* bird, Window* window){
 
 
-	Texture2D top_tex  = LoadTexture("assets/pipe_top.png");
-	Texture2D bot_tex  = LoadTexture("assets/pipe_bot.png");
-	Texture2D bird_tex = LoadTexture("assets/birb3.png");
+	const Texture2D top_tex  = LoadTexture("assets/pipe_top.png");
+	const Texture2D bot_tex  = LoadTexture("assets/pipe_bot.png");
+	const Texture2D bird_tex = LoadTexture("assets/birb3.png");
+	const Texture2D bg_texture = LoadTexture("assets/bg.png");
 
 	bool running 	   = true;
 	bool show_hitboxes = false;
 	bool show_debug    = false;
+
+	float bg_offset = 0.0f;
+	/* How much the bg texture moves each frame */
+	const float bg_parallax_factor = 0.35f;
 	
 
 	/* Initialize pipe buffer */
@@ -217,8 +248,15 @@ void event_loop(Bird* bird, Window* window){
 		/* Main Loop */
 		if(running){
 
+
+		/* Render background */
+		render_background(window, bg_texture, &bg_offset);
+		bg_offset += pipe_speed * bg_parallax_factor;
+
+		/* Render pipes */
 		pipebuf_update(&pipe_buf, pipe_speed, dt, top_tex, bot_tex);
 		pipebuf_render(&pipe_buf);
+
 
 		/* Check collisions */
 		if(check_env_collision(window, bird)){
@@ -249,25 +287,9 @@ void event_loop(Bird* bird, Window* window){
 		
 		/* DEBUG */
 		if(show_debug){
-			char hitbox_status[32];
-			sprintf(hitbox_status, "%s", show_hitboxes ? 
-						"Hitboxes: Visible" :
-						"Hitboxes: Hidden");
-	
-			char curr_speed[32];
-			sprintf(curr_speed, "Speed %.2f", pipe_speed);
-			curr_speed[strlen(curr_speed)] = '\0';
-			DrawText(curr_speed, 200, window->h - 128, 30, RED);
-	
-			hitbox_status[strlen(hitbox_status)] = '\0';
-			DrawText(hitbox_status, 200, window->h - 64, 30, RED);
-			DrawText("(H to toggle)", 600, window->h - 64, 30, RED);
-			if(show_hitboxes){
-				// Render bird hitbox
-				DrawRectangle(bird->posX,
-					      bird->posY,
-					      132, 88, RED); 
-				}
+			if(IsKeyPressed('H')) show_hitboxes = !show_hitboxes;
+			draw_debug_info(window, bird, 
+					&show_hitboxes, pipe_speed);
 		} else {
 			DrawText("Press D to toggle debug info",
 				 window->w - 900 , window->h - 50, 20, BLUE);

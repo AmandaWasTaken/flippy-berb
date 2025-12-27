@@ -8,7 +8,7 @@
 int main(int argc, char** argv){
 
 	// For "random" pipe spawning 
-	srand((int) &sscanf);
+	srand((int) &vsnprintf);
 
 	Window game = {
 		.title = "Birb",

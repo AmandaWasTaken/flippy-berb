@@ -6,6 +6,7 @@
 #define PIPE_WIDTH 200
 
 #include <raylib.h>
+#include "game.h"
 
 typedef struct {
 	Texture2D sprite;
@@ -56,9 +57,14 @@ void render_attempt(Window* window);
 void render_leaderboard(Window* window);
 
 // Pipe_pair spawn_pipe_pair(Window* window);
-void poll_events(Bird* bird, bool* show_hitboxes, bool* show_debug);
+void poll_events(Bird* bird, bool* show_debug, bool* show_hitboxes);
 void event_loop(Bird* bird, Window* window);
 bool check_env_collision(Window* window, Bird* bird);
+void game_reset(Window* window, Bird* bird, Pipe_buffer* buf,
+		Texture2D bird_tex, Texture2D top, Texture2D bot);
+
+void draw_debug_info(Window* window, Bird* bird, 
+		bool* show_hitboxes, float pipe_speed);
 void game_over(Window* window);
 
 #endif
