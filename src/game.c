@@ -9,6 +9,7 @@
 #include "../lib/scores.h"
 #include "../lib/pipes.h"
 #include "../lib/bg.h"
+#include "../lib/mainmenu.h"
 
 Bird DEFAULT_BIRD = {	
 	.posX = 300,
@@ -95,11 +96,11 @@ bool check_env_collision(Window* window, Bird* bird){
 }
 
 void game_reset(Window* window, Bird* bird, Pipe_buffer* buf, 
-		Texture2D bird_tex, Texture2D top, Texture2D bot){
+		Texture2D bird_sprite, Texture2D top, Texture2D bot){
 
 	window->score = 0;
 	*bird = DEFAULT_BIRD;
-	bird->sprite = bird_tex;
+	bird->sprite = bird_sprite;
 	bird->tint = WHITE;
 	pipebuf_init(buf);
 
@@ -135,7 +136,7 @@ void draw_debug_info(Window* window, Bird* bird,
 }
 
 void end_game(Window* window, bool* running, Bird* bird,
-		Texture2D top, Texture2D bot, Texture2D bird_tex,
+		Texture2D top, Texture2D bot, Texture2D bird_sprite,
 		Pipe_buffer* buf){
 
 	/* Draw game over textg */
@@ -161,6 +162,18 @@ void end_game(Window* window, bool* running, Bird* bird,
 	int res_y = GetScreenHeight()/2;
 	DrawText(restart, res_x, res_y, FONT_SIZE_GAMEOVER, DARKGREEN);
 
+	/* Erase scores? */
+
+	char erase[14];
+	sprintf(erase, "Erase scores?");
+	int y2 = GetScreenHeight()/2 - 50;
+	DrawText(erase, res_x, y2, FONT_SIZE_GENERAL, RED);
+
+	if(IsKeyPressed('Q')){
+		fprintf(stdout, "Erasing scores. . .\n");
+		reset_scores();
+	}
+
 	/* Restart game */
 	if(IsKeyPressed('R')){
 
@@ -179,7 +192,7 @@ void end_game(Window* window, bool* running, Bird* bird,
 
 		/* Reset game state */
 		game_reset(window, bird, buf,
-				bird_tex, top, bot);
+				bird_sprite, top, bot);
 		
 		/* we go agane */
 		*running = true;
@@ -203,14 +216,21 @@ void poll_events(Bird* bird, bool* show_debug, bool* show_hitboxes){
 void event_loop(Bird* bird, Window* window){
 
 
-	const Texture2D top_tex  = LoadTexture("assets/pipe_top.png");
-	const Texture2D bot_tex  = LoadTexture("assets/pipe_bot.png");
-	const Texture2D bird_tex = LoadTexture("assets/birb3.png");
-	const Texture2D bg_texture = LoadTexture("assets/bg.png");
+	// Load all textures 
+	const Texture2D top_sprite 	= LoadTexture("assets/pipe_top.png");
+	const Texture2D bot_sprite  	= LoadTexture("assets/pipe_bot.png");
+	const Texture2D bird_sprite 	= LoadTexture("assets/birb3.png");
+	const Texture2D bg_texture 	= LoadTexture("assets/bg.png");
+	const Texture2D b_start_sprite  = LoadTexture("assets/start.png");
+	const Texture2D b_quit_sprite 	= LoadTexture("assets/quit.png");
+	const Texture2D b_scores_sprite = LoadTexture("assets/leaderboard.png");
+	const Texture2D menu_bg		= LoadTexture("assets/menu_bg.png");
 
-	bool running 	   = true;
+
+	bool running 	   = false;
 	bool show_hitboxes = false;
 	bool show_debug    = false;
+	bool first_launch  = true;
 
 	float bg_offset = 0.0f;
 	/* How much the bg texture moves each frame */
@@ -225,7 +245,7 @@ void event_loop(Bird* bird, Window* window){
 	const int dt = 1;
 	for(int i = 0; i < MAX_PIPES; i++){
 		pipebuf_append(&pipe_buf, start_x + i * PIPE_SPACING, 
-			       top_tex, bot_tex);
+			       top_sprite, bot_sprite);
 	}
 
 	while(!WindowShouldClose()){
@@ -244,6 +264,12 @@ void event_loop(Bird* bird, Window* window){
 		bird_hitbox.width  	= 132;
 		bird_hitbox.height 	= 88;
 
+		/* Render main menu before game starts */ 
+		if(first_launch)
+			render_menu(window, &running, 
+				    &first_launch, b_start_sprite,
+				    b_quit_sprite, b_scores_sprite,
+				    menu_bg);
 
 		/* Main Loop */
 		if(running){
@@ -254,7 +280,7 @@ void event_loop(Bird* bird, Window* window){
 		bg_offset += pipe_speed * bg_parallax_factor;
 
 		/* Render pipes */
-		pipebuf_update(&pipe_buf, pipe_speed, dt, top_tex, bot_tex);
+		pipebuf_update(&pipe_buf, pipe_speed, dt, top_sprite, bot_sprite);
 		pipebuf_render(&pipe_buf);
 
 
@@ -303,13 +329,24 @@ void event_loop(Bird* bird, Window* window){
 
 		/* Game over */
 		} else { 
-			end_game(window, &running, bird, top_tex, bot_tex,
-					bird_tex, &pipe_buf);
-		}	
-
+			if(!first_launch){
+				end_game(window, &running, bird, 
+					 top_sprite, bot_sprite,
+					 bird_sprite, &pipe_buf);
+			}	
+		}
 	EndDrawing();
 	}
 
 	UnloadTexture(bird->sprite);
+	UnloadTexture(top_sprite);	
+	UnloadTexture(bot_sprite); 		
+	UnloadTexture(bird_sprite);	
+	UnloadTexture(bg_texture);		
+	UnloadTexture(b_start_sprite); 
+	UnloadTexture(b_quit_sprite);	
+	UnloadTexture(b_scores_sprite);
+	UnloadTexture(menu_bg);
+
 	CloseWindow();
 }

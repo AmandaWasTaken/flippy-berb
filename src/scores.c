@@ -1,5 +1,6 @@
 #include <cjson/cJSON.h>
 #include <stdio.h>
+#include <string.h>
 #include <stdlib.h>
 
 #define BUF_SIZE 1024
@@ -10,6 +11,17 @@ int _compare(const void* a, const void* b){
 	int x = *(const int*) a;
 	int y = *(const int*) b;
 	return y - x;
+}
+
+void reset_scores(void){
+
+	FILE* f = fopen("data/scores.json", "w");
+	if(!f){
+		fprintf(stderr, "Couldn't open file (%s()\n", __func__);
+		return;
+	}
+
+	fclose(f);
 }
 
 void save_score(int score){
