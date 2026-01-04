@@ -4,4 +4,8 @@ THIS IS SUPER WIP SO EXPECT BUGS AND MESSY CODE !!
 raylib, cjson  
 # Build  
 make: literally just 'make'  
+<<<<<<< HEAD
 gcc:  gcc -o \<name\> src/*.c -lraylib -lcjson
+=======
+gcc:  gcc -o <name> src/*.c -lraylib -lcjson
+>>>>>>> refs/remotes/origin/master
