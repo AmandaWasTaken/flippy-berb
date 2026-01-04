@@ -11,6 +11,7 @@
 #include "../lib/bg.h"
 #include "../lib/mainmenu.h"
 
+// Default state for when a player restarts after dying
 Bird DEFAULT_BIRD = {	
 	.posX = 300,
 	.posY = 300,
@@ -19,8 +20,7 @@ Bird DEFAULT_BIRD = {
 	.velocityY = 0.0f,
 };
 
-
-
+// Check if a pipe pair has been passed and increment score if so
 void update_score(Pipe_buffer* buf, Bird* bird, int* score, float* speed){
 
 	for(int i = 0; i < buf->count; i++){
@@ -35,6 +35,8 @@ void update_score(Pipe_buffer* buf, Bird* bird, int* score, float* speed){
 		}
 	}
 }
+
+// Draw score on the game window
 void render_score(Window* window){
 
 		char current_score[32];
@@ -45,6 +47,7 @@ void render_score(Window* window){
 		DrawText(current_score, score_text_x, 0 + 32, FONT_SIZE_GENERAL, RED);
 }
 
+// -||- for attempts
 void render_attempt(Window* window){
 
 		char current_attempt[16];
@@ -55,6 +58,7 @@ void render_attempt(Window* window){
 		DrawText(current_attempt, att_text_x, 32 + 24, FONT_SIZE_GENERAL, RED);
 }
 
+// -||- for top scores
 void render_leaderboard(Window* window){
 
 		int scores[10]; 
@@ -91,10 +95,12 @@ void render_leaderboard(Window* window){
 
 }
 
+// Check if player hit the floor or ceiling
 bool check_env_collision(Window* window, Bird* bird){
 	return bird->posY > window->h || bird->posY < 0;
 }
 
+// Reset game to default state for new attempt
 void game_reset(Window* window, Bird* bird, Pipe_buffer* buf, 
 		Texture2D bird_sprite, Texture2D top, Texture2D bot){
 
@@ -111,6 +117,7 @@ void game_reset(Window* window, Bird* bird, Pipe_buffer* buf,
 	}
 }
 
+// Pipe speed, hitboxes an
 void draw_debug_info(Window* window, Bird* bird, 
 		bool* show_hitboxes, float pipe_speed){
 
@@ -135,6 +142,8 @@ void draw_debug_info(Window* window, Bird* bird,
 		}
 }
 
+// TODO create a proper game over screen
+// Render game over screen and ask for restart and stuff
 void end_game(Window* window, bool* running, Bird* bird,
 		Texture2D top, Texture2D bot, Texture2D bird_sprite,
 		Pipe_buffer* buf){
@@ -178,6 +187,7 @@ void end_game(Window* window, bool* running, Bird* bird,
 	if(IsKeyPressed('R')){
 
 		/* Write score to db */
+		// TODO scores should be added without having to press 'R'
 		if(window->score > 0) {
 			save_score(window->score);
 			fprintf(stdout, "Saving score. . .\n");
@@ -187,7 +197,7 @@ void end_game(Window* window, bool* running, Bird* bird,
 					window->score);
 		}
 
-		/* Reset score */
+		/* Reset score/increment attempt count */
 		window->attempts++;
 
 		/* Reset game state */
@@ -199,8 +209,10 @@ void end_game(Window* window, bool* running, Bird* bird,
 	}
 }
 
+// Check for keyboard events
 void poll_events(Bird* bird, bool* show_debug, bool* show_hitboxes){
 
+	// Jump (literally the only relevant keyboard event)
 	if(IsKeyPressed(KEY_SPACE) || IsKeyPressed(KEY_UP)){
 		bird->velocityY = -bird->jump_velocity;
 	}	
@@ -213,6 +225,8 @@ void poll_events(Bird* bird, bool* show_debug, bool* show_hitboxes){
 	}
 } 
 
+// Main loop 
+// TODO clean this nasty function up
 void event_loop(Bird* bird, Window* window){
 
 
@@ -312,6 +326,7 @@ void event_loop(Bird* bird, Window* window){
 			
 		
 		/* DEBUG */
+		// TODO this str8 up doesn't work after recent changes
 		if(show_debug){
 			if(IsKeyPressed('H')) show_hitboxes = !show_hitboxes;
 			draw_debug_info(window, bird, 
@@ -338,6 +353,7 @@ void event_loop(Bird* bird, Window* window){
 	EndDrawing();
 	}
 
+	// Unload textures from gpu memory
 	UnloadTexture(bird->sprite);
 	UnloadTexture(top_sprite);	
 	UnloadTexture(bot_sprite); 		

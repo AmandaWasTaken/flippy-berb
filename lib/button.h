@@ -1,12 +1,13 @@
 #include <raylib.h>
 #include <stdbool.h>
 
+// Reusable button type
 typedef struct {
 	float width;
 	float height;
-	Vector2 pos;
-	Texture2D sprite;
-	Rectangle bounds;
+	Vector2 pos;		// Position {x, y}
+	Texture2D sprite;	// Button image
+	Rectangle bounds;	// Hitbox boundaries
 } Button;
 
 void _draw_button_shadow(Button* b);

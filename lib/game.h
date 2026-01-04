@@ -8,34 +8,40 @@
 #include <raylib.h>
 #include "game.h"
 
+// Player character (bird)
 typedef struct {
-	Texture2D sprite;
-	float posX;
-	float posY;
-	float velocityY;
-	float gravity;
-	float jump_velocity;
-	Color tint;
+	Texture2D sprite;	// Bird texture
+	float posX;		// X-position
+	float posY;		// Y-position
+	float velocityY;	// Vertical velocity
+	float gravity;		// Gravity strenght
+	float jump_velocity;	// How high bird should jump
+	Color tint;		
 	Rectangle hitbox;
 } Bird;
 
-extern Bird DEFAULT_BIRD;
+extern Bird DEFAULT_BIRD;	// Default settings for
+				// a Bird object
 
+// A single pipe for pipe pairs
 typedef struct {
-	Texture2D sprite;
-	float posX;
-	float posY;
+	Texture2D sprite;	// Pipe texture
+	float posX;		// X-position
+	float posY;		// Y-position
 	Color tint;
 } Pipe;
 
+// Pair consisting of top and bottom pipes
 typedef struct {
 	Pipe top;
 	Pipe bot;
-	bool exists;
+	bool exists;	 // Ignore pipe in rendering and stuff
+			 // if it doesn't exist anymore
 	Rectangle hitbox;
 	bool counted;    // false if pair has not been passed
 } Pipe_pair;
 
+// Ring buffer sort of deal 
 typedef struct {
 	Pipe_pair pairs[MAX_PIPES];
 	int head;	// Position of next pair
@@ -43,6 +49,7 @@ typedef struct {
 	int count;
 } Pipe_buffer;
 
+// Game window
 typedef struct {
 	char* title;
 	int w;

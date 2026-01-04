@@ -2,13 +2,15 @@
 #include <stdio.h>
 #include <stdbool.h>
 
+/* Clickable button */
 typedef struct {
-	float width;
-	float height;
-	Vector2 pos;
-	Texture2D sprite;
-	Rectangle bounds;
+	float width;		// Button width
+	float height;		// Button height
+	Vector2 pos;		// Button position {x, y}
+	Texture2D sprite;	// Button image
+	Rectangle bounds;	// Button hitbox boundaries
 } Button;
+
 
 enum Button_state {
 	NORMAL,
@@ -16,11 +18,13 @@ enum Button_state {
 	PRESSED
 };
 
+/* Draw a box shadow next to button (top left only for now) */
 void _draw_button_shadow(Button* b){
 	DrawRectangle(b->pos.x - 2.0f, b->pos.y - 2.0f, b->width,
 			b->height, DARKGREEN);
 }
 
+/* Check if button was clicked with mouse1 */
 bool button_pressed(Button* b){
 
 	Vector2 mouse_pos = {0.0f, 0.0f};
@@ -51,6 +55,7 @@ bool button_pressed(Button* b){
 	return false;
 }
 
+/* Render a button object */
 void draw_button(Button* b){
 	DrawTexture(b->sprite, b->pos.x, b->pos.y, WHITE);
 }

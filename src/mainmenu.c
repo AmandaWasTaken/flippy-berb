@@ -5,6 +5,12 @@
 #include "../lib/game.h"
 #include "../lib/button.h"
 
+
+// Render main menu before 'start' is clicked
+// @Param main window object
+// @Param flag for game state (true = 'start' has been clicked)
+// @Param flag to make sure menu is only rendered once and not every time player dies
+// @Params menu button images and menu background image
 void render_menu(Window* w, bool* running,
 		bool* first_launch, 
 		Texture2D b_start_sprite,
@@ -12,8 +18,9 @@ void render_menu(Window* w, bool* running,
 		Texture2D b_scores_sprite,
 		Texture2D menu_bg){
 
-	const int button_w = 300;
-	const int button_h = 75;
+	// All buttons have the same dimensions
+	const int   button_w = 300;
+	const int   button_h = 75;
 	const float button_posX = w->w/2 - button_w/2; // Center buttons horizontally
 	const float button_spacing_vert = (float)(w->h)/3 - 50; // Vertical gap 
 
@@ -86,5 +93,3 @@ void render_menu(Window* w, bool* running,
 
 	return;
 }
-
-

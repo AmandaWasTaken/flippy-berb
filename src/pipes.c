@@ -6,18 +6,22 @@
 #define FONT_SIZE_GAMEOVER 40
 #define PIPE_SPACING 	   500.0f
 
-
+// Initialize a ring buffer for pipe pairs
 void pipebuf_init(Pipe_buffer* buf){
 	buf->head  = 0;
 	buf->tail  = 0;
 	buf->count = 0;
 
 	for(int i = 0; i < MAX_PIPES; i++){
-		buf->pairs[i].exists = false;
+		buf->pairs[i].exists  = false;
 		buf->pairs[i].counted = false;
 	}
 }
 
+// Make new pipe pair appear from the right
+// @Param pipe pair object
+// @Param pair start position
+// @Params pipe texture images
 void spawn_pipe_pair(Pipe_pair* pair, float start_x, Texture2D top, Texture2D bot){
 
 	float gap_y = GetRandomValue(150, 450);
@@ -26,17 +30,17 @@ void spawn_pipe_pair(Pipe_pair* pair, float start_x, Texture2D top, Texture2D bo
 	pair->top.sprite = top;
 	pair->bot.sprite = bot;
 
-	pair->top.posX = start_x;
-	pair->top.posY = gap_y - gap_h/2 - PIPE_HEIGHT;
+	pair->top.posX   = start_x;
+	pair->top.posY   = gap_y - gap_h/2 - PIPE_HEIGHT;
 
-	pair->bot.posX = start_x;
-	pair->bot.posY = gap_y + gap_h/2;
+	pair->bot.posX   = start_x;
+	pair->bot.posY   = gap_y + gap_h/2;
 
-	pair->exists = true;
-	pair->counted = false;
+	pair->exists     = true;
+	pair->counted    = false;
 
-	pair->top.tint = WHITE;
-	pair->bot.tint = WHITE;
+	pair->top.tint   = WHITE;
+	pair->bot.tint   = WHITE;
 
 	pair->hitbox = (Rectangle){
 		start_x,
@@ -46,6 +50,7 @@ void spawn_pipe_pair(Pipe_pair* pair, float start_x, Texture2D top, Texture2D bo
 	};
 }
 
+// Add a new pipe pair to the buffer
 bool pipebuf_append(Pipe_buffer* buf, float start_x, Texture2D top, Texture2D bot){
 	
 	if(buf->count == MAX_PIPES) return false;
@@ -56,6 +61,7 @@ bool pipebuf_append(Pipe_buffer* buf, float start_x, Texture2D top, Texture2D bo
 	return true;
 }
 
+// Remove pipe pair from buffer after it's off screen
 bool pipebuf_remove(Pipe_buffer* buf){
 	
 	if(buf->count == 0) return false;
@@ -66,6 +72,7 @@ bool pipebuf_remove(Pipe_buffer* buf){
 	return true;
 }
 
+// Get x position of the rightmost pipe pair in buffer
 float _pipebuf_getRightmost(const Pipe_buffer* buf){
 
 	if(buf->count == 0) return GetScreenWidth();
@@ -75,6 +82,7 @@ float _pipebuf_getRightmost(const Pipe_buffer* buf){
 
 }
 
+// Update positions of existing pipe pairs
 void pipebuf_update(Pipe_buffer* buf, float speed, float dt, Texture2D top, Texture2D bot){
 
 	for(int i = 0; i < buf->count; i++){
@@ -97,6 +105,7 @@ void pipebuf_update(Pipe_buffer* buf, float speed, float dt, Texture2D top, Text
 	}
 }
 
+// Render all existing pipe pairs
 void pipebuf_render(Pipe_buffer* buf){
 
 	for(int i = 0; i < buf->count; i++){
@@ -112,6 +121,7 @@ void pipebuf_render(Pipe_buffer* buf){
 
 }
 
+// Return bounding box of a pipe
 Rectangle _get_pipe_hitbox(Pipe* p){
 	return (Rectangle) {
 		p->posX,
@@ -121,6 +131,7 @@ Rectangle _get_pipe_hitbox(Pipe* p){
 	};
 }
 
+// Helper function for below 
 bool check_pipe_collision(Pipe_pair* p, Rectangle bird_hitbox){
 
 	if(!p->exists) return false;
@@ -132,6 +143,7 @@ bool check_pipe_collision(Pipe_pair* p, Rectangle bird_hitbox){
 	       CheckCollisionRecs(bird_hitbox, bot_hitbox);
 }
 
+// Check if player has hit any pipes currently on screen
 bool pipebuf_check_collision(Pipe_buffer* buf, Rectangle bird_hitbox){
 
 	for(int i = 0; i < buf->count; i++){
