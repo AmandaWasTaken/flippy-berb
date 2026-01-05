@@ -72,6 +72,12 @@ void game_reset(Window* window, Bird* bird, Pipe_buffer* buf,
 
 void draw_debug_info(Window* window, Bird* bird, 
 		bool* show_hitboxes, float pipe_speed);
-void game_over(Window* window);
+
+void end_game(Window* window, bool* running, Bird* bird,
+	      Texture2D top, Texture2D bot, Texture2D bird_sprite,
+	      Texture2D b_retry_sprite, 
+	      Texture2D b_score_reset_sprite,
+	      Texture2D b_quit_sprite, 
+	      Texture2D death_bg, Pipe_buffer* buf);
 
 #endif

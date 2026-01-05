@@ -82,7 +82,7 @@ void render_menu(Window* w, bool* running,
 	}
 	if(button_pressed(&quit)){
 		// TODO This is not very sexy
-		exit(1);
+		exit(0);
 	}
 
 	/* Render buttons and bg */

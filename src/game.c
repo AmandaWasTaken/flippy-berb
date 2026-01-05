@@ -10,6 +10,7 @@
 #include "../lib/pipes.h"
 #include "../lib/bg.h"
 #include "../lib/mainmenu.h"
+#include "../lib/deathscreen.h"
 
 // Default state for when a player restarts after dying
 Bird DEFAULT_BIRD = {	
@@ -61,38 +62,37 @@ void render_attempt(Window* window){
 // -||- for top scores
 void render_leaderboard(Window* window){
 
-		int scores[10]; 
-		int score_count = fetch_scores(scores);
-	    	qsort(scores, score_count, sizeof(int), _compare);
+		
+	int scores[10]; 
+	int score_count = fetch_scores(scores);
+	qsort(scores, score_count, sizeof(int), _compare);
 
-		char score_display[score_count * 16];
-		char* wp = score_display;
-		int remaining = sizeof(score_display);
-		int entries = score_count;
+	char score_display[score_count * 16];
+	char* wp = score_display;
+	int remaining = sizeof(score_display);
+	int entries = score_count;
+	for(int i = 0; i < entries; i++){
+		int written = snprintf(wp, remaining, "%i\n", scores[i]);
+		if(written< 0 || written >=remaining) break;
 
-		for(int i = 0; i < entries; i++){
-			int written = snprintf(wp, remaining, "%i\n", scores[i]);
-			if(written < 0 || written >=remaining) break;
+		wp += written;
+		remaining -= written;
+	}
+	DrawText(score_display, window->w - 25, 10, 30, MAROON);
 
-			wp += written;
-			remaining -= written;
-		}
-		DrawText(score_display, window->w - 25, 10, 30, MAROON);
+	char score_pos[256];
+	wp = score_pos;
+	remaining = sizeof(score_pos);
+	entries = score_count;
 
-		char score_pos[256];
-		wp = score_pos;
-		remaining = sizeof(score_pos);
-		entries = score_count;
+	for(int i = 1; i <= entries; i++){
+		int written = snprintf(wp, remaining, "#%i:\n", i);
+		if(written < 0 || written >=remaining) break;
 
-		for(int i = 1; i <= entries; i++){
-			int written = snprintf(wp, remaining, "#%i:\n", i);
-			if(written < 0 || written >=remaining) break;
-
-			wp += written;
-			remaining -= written;
-		}
-		DrawText(score_pos, window->w - 95, 10, 30, MAROON);
-
+		wp += written;
+		remaining -= written;
+	}
+	DrawText(score_pos, window->w - 95, 10, 30, MAROON);
 }
 
 // Check if player hit the floor or ceiling
@@ -142,71 +142,34 @@ void draw_debug_info(Window* window, Bird* bird,
 		}
 }
 
-// TODO create a proper game over screen
 // Render game over screen and ask for restart and stuff
 void end_game(Window* window, bool* running, Bird* bird,
 		Texture2D top, Texture2D bot, Texture2D bird_sprite,
-		Pipe_buffer* buf){
+		Texture2D b_retry_sprite, Texture2D b_score_reset_sprite,
+		Texture2D b_quit_sprite, Texture2D death_bg, Pipe_buffer* buf){
 
-	/* Draw game over textg */
-	char* game_over = "Game Over!";
-	int game_over_w = MeasureText(game_over, FONT_SIZE_GAMEOVER);
-	int game_over_x = (GetScreenWidth() - game_over_w) / 2;
-	int game_over_y = GetScreenHeight()/2 - 200;
-	DrawText(game_over, game_over_x, game_over_y, FONT_SIZE_GAMEOVER, RED);
-
-	/* Draw final score */
-	char final_score[32];
-	sprintf(final_score, "Final score: %i", window->score); 
-	int score_w = MeasureText(final_score, FONT_SIZE_GAMEOVER);
-	int score_x = (GetScreenWidth() - score_w) / 2;
-	int score_y = GetScreenHeight()/2 - 100;
-	DrawText(final_score, score_x, score_y, FONT_SIZE_GAMEOVER, RED);
-
-	/* Proompt for restart */
-	char restart[19];
-	sprintf(restart, "Press R to Restart");
-	int res_w = MeasureText(restart, FONT_SIZE_GAMEOVER);
-	int res_x = (GetScreenWidth() - res_w) / 2;
-	int res_y = GetScreenHeight()/2;
-	DrawText(restart, res_x, res_y, FONT_SIZE_GAMEOVER, DARKGREEN);
-
-	/* Erase scores? */
-
-	char erase[14];
-	sprintf(erase, "Erase scores?");
-	int y2 = GetScreenHeight()/2 - 50;
-	DrawText(erase, res_x, y2, FONT_SIZE_GENERAL, RED);
-
-	if(IsKeyPressed('Q')){
-		fprintf(stdout, "Erasing scores. . .\n");
-		reset_scores();
-	}
-
-	/* Restart game */
-	if(IsKeyPressed('R')){
-
-		/* Write score to db */
-		// TODO scores should be added without having to press 'R'
-		if(window->score > 0) {
+	
+	// Only save scores >0
+	if(window->score > 0) {
 			save_score(window->score);
 			fprintf(stdout, "Saving score. . .\n");
-		} else {
-			fprintf(stdout, "Score of %i was not saved. "
-					"(Less than or equal to 0)\n",
-					window->score);
-		}
-
-		/* Reset score/increment attempt count */
-		window->attempts++;
-
-		/* Reset game state */
-		game_reset(window, bird, buf,
-				bird_sprite, top, bot);
-		
-		/* we go agane */
-		*running = true;
 	}
+	
+	// Draw death screen bg image
+	render_deathscreen(window, running, b_retry_sprite,
+			   b_score_reset_sprite, b_quit_sprite,
+			   death_bg);
+
+
+	// Write final score
+	char score[12 + window->score];
+	sprintf(score, "Final score: %i", window->score);
+	int text_w = MeasureText(score, FONT_SIZE_GAMEOVER);
+	DrawText(score, (window->w - text_w)/2, FONT_SIZE_GAMEOVER + 10,
+		 FONT_SIZE_GAMEOVER, RED);
+
+	// Reset game state 
+	game_reset(window, bird, buf, bird_sprite, top, bot);
 }
 
 // Check for keyboard events
@@ -216,13 +179,6 @@ void poll_events(Bird* bird, bool* show_debug, bool* show_hitboxes){
 	if(IsKeyPressed(KEY_SPACE) || IsKeyPressed(KEY_UP)){
 		bird->velocityY = -bird->jump_velocity;
 	}	
-	if(IsKeyPressed('H')){
-		*show_hitboxes = ! *show_hitboxes;
-	}
-
-	if(IsKeyPressed('D')){
-		*show_debug = ! *show_debug;
-	}
 } 
 
 // Main loop 
@@ -238,7 +194,11 @@ void event_loop(Bird* bird, Window* window){
 	const Texture2D b_start_sprite  = LoadTexture("assets/start.png");
 	const Texture2D b_quit_sprite 	= LoadTexture("assets/quit.png");
 	const Texture2D b_scores_sprite = LoadTexture("assets/leaderboard.png");
+	const Texture2D b_retry_sprite  = LoadTexture("assets/retry.png");
+	const Texture2D b_score_reset_sprite =
+					  LoadTexture("assets/reset_scores.png");
 	const Texture2D menu_bg		= LoadTexture("assets/menu_bg.png");
+	const Texture2D death_bg 	= LoadTexture("assets/death_bg.png");
 
 
 	bool running 	   = false;
@@ -332,8 +292,9 @@ void event_loop(Bird* bird, Window* window){
 			draw_debug_info(window, bird, 
 					&show_hitboxes, pipe_speed);
 		} else {
-			DrawText("Press D to toggle debug info",
-				 window->w - 900 , window->h - 50, 20, BLUE);
+			DrawText("Press D to toggle debug info "
+				 "(Currently not working lol)",
+				 window->w - 900 , window->h - 50, 20, WHITE);
 		}
 
 		/* Render bird itself */
@@ -347,13 +308,16 @@ void event_loop(Bird* bird, Window* window){
 			if(!first_launch){
 				end_game(window, &running, bird, 
 					 top_sprite, bot_sprite,
-					 bird_sprite, &pipe_buf);
+					 bird_sprite, b_retry_sprite,
+					 b_score_reset_sprite,
+					 b_quit_sprite, death_bg, &pipe_buf);
 			}	
 		}
 	EndDrawing();
 	}
 
 	// Unload textures from gpu memory
+	// TODO do something about this shit
 	UnloadTexture(bird->sprite);
 	UnloadTexture(top_sprite);	
 	UnloadTexture(bot_sprite); 		
@@ -363,6 +327,9 @@ void event_loop(Bird* bird, Window* window){
 	UnloadTexture(b_quit_sprite);	
 	UnloadTexture(b_scores_sprite);
 	UnloadTexture(menu_bg);
+	UnloadTexture(death_bg);
+	UnloadTexture(b_retry_sprite);
+	UnloadTexture(b_score_reset_sprite);
 
 	CloseWindow();
 }
